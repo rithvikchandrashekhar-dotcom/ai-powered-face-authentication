@@ -1,5 +1,15 @@
+import os
+import time
+
+import cv2
 import insightface
 import numpy as np
+import onnxruntime as ort
+
+# Containers often expose every host core while enforcing a small CPU
+# quota, which makes default thread pools thrash. Cap them.
+CPU_THREADS = int(os.getenv("CPU_THREADS", "2"))
+cv2.setNumThreads(CPU_THREADS)
 
 
 class FaceEngine:
@@ -24,8 +34,13 @@ class FaceEngine:
 
         # Only detection and recognition are used. Skipping the
         # landmark and gender/age models lowers memory use.
+        session_options = ort.SessionOptions()
+        session_options.intra_op_num_threads = CPU_THREADS
+        session_options.inter_op_num_threads = 1
+
         self.app = insightface.app.FaceAnalysis(
             name="buffalo_l",
+            sess_options=session_options,
             allowed_modules=["detection", "recognition"],
             providers=["CPUExecutionProvider"],
         )
@@ -59,7 +74,14 @@ class FaceEngine:
         if frame is None:
             return []
 
+        started = time.perf_counter()
+
         faces = self.app.get(frame)
+
+        print(
+            f"[timing] face detect+embed: "
+            f"{time.perf_counter() - started:.2f}s"
+        )
 
         return faces
 

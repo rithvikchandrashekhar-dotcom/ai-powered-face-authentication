@@ -1,5 +1,6 @@
 import os
 import sys
+import time
 import cv2
 import numpy as np
 import torch
@@ -68,6 +69,9 @@ MODEL_CONFIGS = [
 class PAD:
 
     def __init__(self, device="cpu"):
+
+        # Cap torch threads; see CPU_THREADS note in face_engine.py.
+        torch.set_num_threads(int(os.getenv("CPU_THREADS", "2")))
 
         self.device = torch.device(device)
 
@@ -247,6 +251,8 @@ class PAD:
         image
     ):
 
+        started = time.perf_counter()
+
         tensor = self._preprocess(image)
 
         with torch.no_grad():
@@ -257,6 +263,11 @@ class PAD:
                 output,
                 dim=1
             )
+
+        print(
+            f"[timing] PAD model: "
+            f"{time.perf_counter() - started:.2f}s"
+        )
 
         return probability.cpu().numpy()[0]
 
