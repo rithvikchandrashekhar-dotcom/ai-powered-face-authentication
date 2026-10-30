@@ -174,17 +174,19 @@ def main():
     labels = ["REAL", "SPOOF"]
     cm = confusion_matrix(y_true, y_pred, labels=labels)
     # Rows = actual, columns = predicted; order is REAL, SPOOF.
-    tn_real, fp_real = int(cm[0, 0]), int(cm[0, 1])
-    fn_spoof, tp_spoof = int(cm[1, 0]), int(cm[1, 1])
+    real_correct, real_rejected = int(cm[0, 0]), int(cm[0, 1])
+    spoof_accepted, spoof_rejected = int(cm[1, 0]), int(cm[1, 1])
 
     accuracy = accuracy_score(y_true, y_pred)
-    precision, recall, f1, _ = precision_recall_fscore_support(
-        y_true, y_pred, labels=["SPOOF"], average="binary", zero_division=0
+    precisions, recalls, f1_scores, _ = precision_recall_fscore_support(
+        y_true, y_pred, labels=labels, average=None, zero_division=0
     )
+    # Index 1 corresponds to SPOOF because labels = ["REAL", "SPOOF"].
+    precision, recall, f1 = float(precisions[1]), float(recalls[1]), float(f1_scores[1])
     real_count = int(sum(label == "REAL" for label in y_true))
     spoof_count = int(sum(label == "SPOOF" for label in y_true))
-    frr = (fn_spoof / real_count) if real_count else float("nan")
-    far = (spoof_count - tp_spoof) / spoof_count if spoof_count else float("nan")
+    frr = (real_rejected / real_count) if real_count else float("nan")
+    far = (spoof_accepted / spoof_count) if spoof_count else float("nan")
 
     args.output_dir.mkdir(parents=True, exist_ok=True)
     csv_path = args.output_dir / "pad_predictions.csv"
